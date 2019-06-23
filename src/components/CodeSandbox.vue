@@ -26,7 +26,6 @@
 import { value, watch } from 'vue-function-api'
 import MonacoEditor from 'vue-monaco'
 import prettier from 'prettier/standalone'
-import prettierBabelParser from 'prettier/parser-babylon'
 import prettierTypescriptParser from 'prettier/parser-typescript'
 import { convertScript } from '@/converter'
 import { onWindowResize } from '@/functions/windowSize'
@@ -67,12 +66,11 @@ export default {
         // Prettier
         result.value = prettier.format(resultCode, {
           plugins: [
-            prettierBabelParser,
-            prettierTypescriptParser
+            prettierTypescriptParser,
           ],
-          parser: 'babel',
+          parser: 'typescript',
           semi: false,
-          singleQuote: true
+          singleQuote: true,
         })
       } catch (e) {
         console.error(e)
