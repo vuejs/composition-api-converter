@@ -1,5 +1,5 @@
 import { parse, print, types, visit } from 'recast'
-import { camel, kebab } from 'case'
+import { camel, kebab, pascal } from 'case'
 import levenshtein from 'js-levenshtein'
 import stemmer from 'stemmer'
 
@@ -402,9 +402,9 @@ function groupStatements (nodes, setupVariables) {
         if (group.nodes.size === 1) {
           bestGroup.nodes.add(group.nodes.values().next().value)
           group.nodes.clear()
+        }
       }
     }
-  }
   }
 
   // Variables declarations & dependency identifiers
@@ -473,7 +473,10 @@ function groupStatements (nodes, setupVariables) {
 
   let index = 0
   for (const group of groups) {
-    result.push(`// Group ${++index} (score: ${group.score}, dec: ${group.declarations.length}, deps: ${group.dependencies.size}, usage: ${group.usageScore})`, ...group.nodes)
+    // result.push(`// Group ${++index} (score: ${group.score}, dec: ${group.declarations.length}, deps: ${group.dependencies.size}, usage: ${group.usageScore})`)
+    result.push(`// ${generateGroupName(group, index)}`)
+    result.push(...group.nodes)
+    index++
   }
 
   if (otherNodes.length) {
@@ -570,32 +573,58 @@ function processWords (words, stemming = false) {
   }, [])
 }
 
-// function getSetupVariableStats (ast, setupVariables, stemming = false) {
-//   const stats = {}
-//   visit(ast, {
-//     visitIdentifier(path) {
-//       let identifier = path.value.name
-//       if (setupVariables.includes(identifier)) {
-//         addVariableStats(stats, identifier, stemming)
-//       }
-//       this.traverse(path)
-//     },
-//   })
-//   return stats
-// }
+/**
+ * @param {StatementGroup} group
+ * @param {number} index
+ */
+function generateGroupName (group, index) {
+  if (group.declarations) {
+    const vars = {}
+    // Count variable identifiers
+    visit(Array.from(group.nodes), {
+      visitIdentifier (path) {
+        let identifier = path.value.name
+        if (group.declarations.includes(identifier)) {
+          const words = processWords([{ value: identifier, score: 1 }])
+          console.log(identifier, words)
+          for (const word of words) {
+            if (!vars[word.value]) {
+              vars[word.value] = 1
+            } else {
+              vars[word.value]++
+            }
+          }
+        }
+        this.traverse(path)
+      },
+    })
+    // Sort by count
+    let sortedVars = Object.keys(vars)
+      .filter(v => vars[v] > 1)
+      .sort((a, b) => vars[b] - vars[a])
+    // Cache stemmed variable names
+    const stemmedVars = {}
+    for (const v of sortedVars) {
+      stemmedVars[v] = stemmer(v)
+    }
+    // Heuristic word removal
+    sortedVars = sortedVars.filter(a => {
+      for (const b of sortedVars) {
+        if (a !== b && (
+          // If stemmed names are identical, we keep only the shortest one
+          (stemmedVars[a] === stemmedVars[b] && a.length > b.length) ||
+          // If the names are close, we keep only the most used one
+          (vars[a] < vars[b] && levenshtein(stemmedVars[a], stemmedVars[b]) <= 1)
+        )) {
+          return false
+        }
+      }
+      return true
+    })
+    // Final formatting
+    return sortedVars.map(v => pascal(v)).join(' ')
+  }
 
-// function addVariableStats (stats, identifier, stemming = false, update = value => value + 1) {
-//   let ids = [identifier]
-
-//   if (stemming) {
-//     ids = processNames(ids)
-//   }
-  
-//   for (const id of ids) {
-//     if (!stats[id]) {
-//       stats[id] = update(0)
-//     } else {
-//       stats[id] += update(stats[id])
-//     }
-//   }
-// }
+  // Default dumb name
+  return `Group #${index + 1}`
+}
