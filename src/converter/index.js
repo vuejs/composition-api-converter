@@ -324,24 +324,30 @@ function transformThis (node, setupVariables, valueWrappers) {
  */
 
 /**
+ * @typedef StatementGroup
+ * @prop {Set<import('recast').types.ASTNode>} nodes
+ * @prop {number} score
+ * @prop {string[]} declarations
+ * @prop {Set<string>} dependencies
+ * @prop {number} usageScore
+ */
+
+/**
  * @param {import('recast').types.ASTNode[]} nodes
  * @param {string[]} setupVariables
  */
 function groupStatements (nodes, setupVariables) {
-  // const stemmedVariableStats = getSetupVariableStats(nodes, setupVariables, true)
-  // console.log(stemmedVariableStats)
-
-  /** @type {{ nodes: Set, score: number }[]} */
+  /** @type {StatementGroup[]} */
   let groups = []
 
   // Classify nodes
   const wordedNodes = []
-  const unwordedNodes = []
+  const otherNodes = []
   for (const node of nodes) {
     if (getStatementWords(node, setupVariables).length) {
       wordedNodes.push(node)
     } else {
-      unwordedNodes.push(node)
+      otherNodes.push(node)
     }
   }
 
@@ -350,14 +356,19 @@ function groupStatements (nodes, setupVariables) {
     for (const nodeB of wordedNodes) {
       if (nodeA !== nodeB) {
         const score = getStatementGroupScore(nodeA, nodeB, setupVariables)
+        // console.log(print(nodeA).code, '\n', print(nodeB).code, score)
         if (score > 0) {
           let group = groups.find(
             g => g.score === score && (g.nodes.has(nodeA) || g.nodes.has(nodeB))
           )
+          // console.log(group)
           if (!group) {
             group = {
               nodes: new Set(),
               score,
+              declarations: [],
+              dependencies: new Set(),
+              usageScore: 0,
             }
             groups.push(group)
           }
@@ -386,24 +397,88 @@ function groupStatements (nodes, setupVariables) {
     for (const group of relevantGroups) {
       if (group !== bestGroup) {
         group.nodes.delete(node)
+
+        // Don't leave groups with only one statement
+        if (group.nodes.size === 1) {
+          bestGroup.nodes.add(group.nodes.values().next().value)
+          group.nodes.clear()
+      }
+    }
+  }
+  }
+
+  // Variables declarations & dependency identifiers
+  for (const group of groups) {
+    for (const node of group.nodes) {
+      const varName = mayGetVariableDeclarationName(node)
+      if (varName) {
+        group.declarations.push(varName)
+      }
+
+      visit(Array.from(group.nodes), {
+        visitIdentifier (path) {
+          let identifier = path.value.name
+          if (setupVariables.includes(identifier) && !group.declarations.includes(identifier)) {
+            group.dependencies.add(identifier)
+          }
+          this.traverse(path)
+        },
+      })
+    }
+  }
+
+  // Used by other group stats
+  for (const groupA of groups) {
+    for (const declaration of groupA.declarations) {
+      for (const groupB of groups) {
+        if (groupA !== groupB) {
+          if (groupB.dependencies.has(declaration)) {
+            groupA.usageScore++
+          }
+        }
       }
     }
   }
 
   // Sort groups
-  groups = groups.filter(g => g.nodes.size).sort((a, b) => b.score - a.score)
+  groups = groups
+    .filter(g => g.nodes.size)
+    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => {
+      const declarationsA = a.declarations.length
+      const dependenciesA = a.dependencies.size
+      const scoreA = declarationsA - dependenciesA
+      const declarationsB = b.declarations.length
+      const dependenciesB = b.dependencies.size
+      const scoreB = declarationsB - dependenciesB
+      if (scoreA === scoreB) {
+        return declarationsB - declarationsA
+      }
+      return scoreB - scoreA
+    })
+    .sort((a, b) => b.usageScore - a.usageScore)
 
+  // Debug
   for (const group of groups) {
-    console.log('group score:', group.score, 'statements:', Array.from(group.nodes).map(node => print(node).code))
+    console.log(
+      'group score:', group.score,
+      'statements:', Array.from(group.nodes).map(node => ({ code: print(node).code, words: JSON.stringify(wordNodeCache.get(node)) })),
+      'declarations:', group.declarations,
+      'dependencies:', group.dependencies,
+      'usage score:', group.usageScore
+    )
   }
 
   const result = []
 
+  let index = 0
   for (const group of groups) {
-    result.push(...group.nodes)
+    result.push(`// Group ${++index} (score: ${group.score}, dec: ${group.declarations.length}, deps: ${group.dependencies.size}, usage: ${group.usageScore})`, ...group.nodes)
   }
 
-  result.push(...unwordedNodes)
+  if (otherNodes.length) {
+    result.push(`// Misc`, ...otherNodes)
+  }
 
   return result
 }
@@ -412,11 +487,11 @@ function groupStatements (nodes, setupVariables) {
  * Returns a measure of how close two statements should be
  * @param {import('recast').types.ASTNode} nodeA
  * @param {import('recast').types.ASTNode} nodeB
- * @param {{ [key: string]: number }} variableStats
+ * @param {string[]} variables
  */
-function getStatementGroupScore (nodeA, nodeB, setupVariables) {
-  const wordsA = getStatementWords(nodeA, setupVariables)
-  const wordsB = getStatementWords(nodeB, setupVariables)
+function getStatementGroupScore (nodeA, nodeB, variables) {
+  const wordsA = getStatementWords(nodeA, variables)
+  const wordsB = getStatementWords(nodeB, variables)
   let score = 0
   for (const wordA of wordsA) {
     for (const wordB of wordsB) {
@@ -427,6 +502,12 @@ function getStatementGroupScore (nodeA, nodeB, setupVariables) {
     }
   }
   return score
+}
+
+function mayGetVariableDeclarationName (node) {
+  if (namedTypes.VariableDeclaration.check(node)) {
+    return node.declarations[0].id.name
+  }
 }
 
 const wordNodeCache = new Map()
@@ -442,15 +523,15 @@ function getStatementWords (node, setupVariables) {
     /** @type {Word[]} */
     let words = []
     // Variable
-    if (namedTypes.VariableDeclaration.check(node)) {
-      words.push({ value: node.declarations[0].id.name, score: 1 })
+    let varName = mayGetVariableDeclarationName(node)
+    if (varName) {
+      words.push({ value: varName, score: 1 })
     } else {
       // Contained identifiers
       visit(node, {
         visitIdentifier (path) {
           let identifier = path.value.name
           if (setupVariables.includes(identifier) && !words.includes(identifier)) {
-            console.log(path)
             words.push({ value: identifier, score: 1 })
           }
           this.traverse(path)
@@ -463,7 +544,7 @@ function getStatementWords (node, setupVariables) {
     if (wordCache.has(allWords)) {
       words = wordCache.get(allWords)
     } else {
-      words = processWords(words)
+      words = processWords(words, true)
       wordCache.set(allWords, words)
     }
     wordNodeCache.set(node, words)
@@ -476,12 +557,13 @@ function getStatementWords (node, setupVariables) {
 /**
  * Separate & stem words
  * @param {Word[]} words
+ * @param {boolean} stemming
  * @returns {Word[]}
  */
-function processWords (words) {
+function processWords (words, stemming = false) {
   return words.reduce((list, word) => {
     list.push(...kebab(word.value).split('-').map(value => ({
-      value: stemmer(value),
+      value: stemming ? stemmer(value) : value,
       score: word.score,
     })))
     return list
