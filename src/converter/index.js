@@ -59,6 +59,9 @@ export function convertScript(script) {
   /** @type {string[]} */
   const valueWrappers = []
 
+  /** @type {string[]} */
+  const setupVariables = []
+
   // Data
   const dataOption = options.find(node => node.key.name === 'data')
   if (dataOption) {
@@ -102,6 +105,7 @@ export function convertScript(script) {
         setupReturn.argument.properties.push(
           builders.identifier(property.name),
         )
+        setupVariables.push(property.name)
         if (!property.state) {
           valueWrappers.push(property.name)
         }
@@ -140,6 +144,7 @@ export function convertScript(script) {
       setupReturn.argument.properties.push(
         builders.identifier(property.key.name),
       )
+      setupVariables.push(property.key.name)
       valueWrappers.push(property.key.name)
     }
     removeOption(computedOption)
@@ -231,6 +236,7 @@ export function convertScript(script) {
       setupReturn.argument.properties.push(
         builders.identifier(property.key.name),
       )
+      setupVariables.push(property.key.name)
     }
     removeOption(methodsOption)
   }
@@ -254,7 +260,8 @@ export function convertScript(script) {
   processHooks(LIFECYCLE_HOOKS, newImports.vue)
   processHooks(ROUTER_HOOKS, newImports.vueRouter)
 
-  transformThis(setupFn.body.body, valueWrappers)
+  // Remove `this`
+  transformThis(setupFn.body.body, setupVariables, valueWrappers)
 
   setupFn.body.body.push(setupReturn)
   componentDefinition.declaration.properties.push(
@@ -277,12 +284,14 @@ export function convertScript(script) {
 
 /**
  * @param {import('recast').types.ASTNode} node
+ * @param {string[]} setupVariables
  * @param {string[]} valueWrappers
  */
-function transformThis (node, valueWrappers) {
+function transformThis (node, setupVariables, valueWrappers) {
   visit(node, {
     visitMemberExpression (path) {
-      if (namedTypes.ThisExpression.check(path.value.object)) {
+      if (namedTypes.ThisExpression.check(path.value.object) &&
+        setupVariables.includes(path.value.property.name)) {
         // Remove this
         let parentObject = builders.identifier(path.value.property.name)
         // Value wrapper
