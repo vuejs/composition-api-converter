@@ -1,5 +1,5 @@
 import { parse, print, types, visit } from 'recast'
-import { camel } from 'case'
+import { camel, kebab } from 'case'
 
 const { namedTypes, builders } = types
 
@@ -273,10 +273,17 @@ export function convertScript(script) {
   )
 
   // Imports
-  if (newImports.length) {
-    const specifiers = newImports.map(i => builders.importSpecifier(builders.identifier(i)))
-    const importDeclaration = builders.importDeclaration(specifiers, builders.stringLiteral('vue'))
-    ast.program.body.splice(0, 0, importDeclaration, `\n`)
+  const importStatements = []
+  for (const key in newImports) {
+    const pkg = kebab(key)
+    if (newImports[key].length) {
+      const specifiers = newImports[key].map(i => builders.importSpecifier(builders.identifier(i)))
+      const importDeclaration = builders.importDeclaration(specifiers, builders.stringLiteral(pkg))
+      importStatements.push(importDeclaration)
+  }
+  }
+  if (importStatements.length) {
+    ast.program.body.splice(0, 0, ...importStatements, `\n`)
   }
 
   return print(ast).code
