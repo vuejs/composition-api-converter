@@ -9,8 +9,10 @@
   },
   "dependencies": {
     "case": "^1.6.1",
+    "js-levenshtein": "^1.1.6",
     "prettier": "^1.18.2",
     "recast": "^0.18.1",
+    "stemmer": "^1.0.4",
     "vue": "^2.5.22",
     "vue-function-api": "^1.0.3",
     "vue-monaco": "^0.3.2"
@@ -38,7 +40,10 @@
     ],
     "rules": {
       "no-console": "off",
-      "comma-dangle": ["error", "always-multiline"]
+      "comma-dangle": [
+        "error",
+        "always-multiline"
+      ]
     },
     "parserOptions": {
       "parser": "babel-eslint"
