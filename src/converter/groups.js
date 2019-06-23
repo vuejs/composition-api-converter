@@ -67,29 +67,38 @@ export function groupStatements (nodes, setupVariables) {
     }
   }
 
+  const ungroupedNodes = []
+
   // Remove duplicates
   for (const node of wordedNodes) {
     let bestGroup
     const relevantGroups = []
+    let isInGroup = false
     for (const group of groups) {
       if (group.nodes.has(node)) {
+        isInGroup = true
         if (!bestGroup || group.score > bestGroup.score) {
           bestGroup = group
         }
         relevantGroups.push(group)
       }
     }
-    // Remove the duplicated node in the not best groups
-    for (const group of relevantGroups) {
-      if (group !== bestGroup) {
-        group.nodes.delete(node)
 
-        // Don't leave groups with only one statement
-        if (group.nodes.size === 1) {
-          bestGroup.nodes.add(group.nodes.values().next().value)
-          group.nodes.clear()
+    if (isInGroup) {
+      // Remove the duplicated node in the not best groups
+      for (const group of relevantGroups) {
+        if (group !== bestGroup) {
+          group.nodes.delete(node)
+
+          // Don't leave groups with only one statement
+          if (group.nodes.size === 1) {
+            bestGroup.nodes.add(group.nodes.values().next().value)
+            group.nodes.clear()
+          }
         }
       }
+    } else {
+      ungroupedNodes.push(node)
     }
   }
 
@@ -165,8 +174,11 @@ export function groupStatements (nodes, setupVariables) {
     index++
   }
 
-  if (otherNodes.length) {
-    result.push(`// Misc`, ...otherNodes)
+  if (ungroupedNodes.length || otherNodes.length) {
+    if (groups.length) {
+      result.push(`// Misc`)
+    }
+    result.push(...ungroupedNodes, ...otherNodes)
   }
 
   return result
