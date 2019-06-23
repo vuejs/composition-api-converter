@@ -16,6 +16,12 @@ const LIFECYCLE_HOOKS = [
   'deactivated',
 ]
 
+const ROUTER_HOOKS = [
+  'beforeRouteEnter',
+  'beforeRouteUpdate',
+  'beforeRouteLeave',
+]
+
 export function convertScript(script) {
   const ast = parse(script)
   /** @type {import('recast').types.namedTypes.ExportDefaultDeclaration} */
@@ -32,7 +38,10 @@ export function convertScript(script) {
     componentDefinition.declaration.properties.splice(index, 1)
   }
 
-  const newImports = []
+  const newImports = {
+    vue: [],
+    vueRouter: [],
+  }
   const setupReturn = builders.returnStatement(
     builders.objectExpression([]),
   )
@@ -73,10 +82,10 @@ export function convertScript(script) {
     }))
     if (dataProperties.length) {
       if (dataProperties.some(p => !p.state)) {
-        newImports.push('value')
+        newImports.vue.push('value')
       }
       if (dataProperties.some(p => p.state)) {
-        newImports.push('state')
+        newImports.vue.push('state')
       }
       for (const property of dataProperties) {
         setupFn.body.body.push(
@@ -104,7 +113,7 @@ export function convertScript(script) {
   // Computed
   const computedOption = options.find(property => property.key.name === 'computed')
   if (computedOption) {
-    newImports.push('computed')
+    newImports.vue.push('computed')
     for (const property of computedOption.value.properties) {
       let args
       if (namedTypes.FunctionExpression.check(property.value)) {
@@ -139,7 +148,7 @@ export function convertScript(script) {
   // Watch
   const watchOption = options.find(property => property.key.name === 'watch')
   if (watchOption) {
-    newImports.push('watch')
+    newImports.vue.push('watch')
     for (const property of watchOption.value.properties) {
       let firstArg
       if (namedTypes.Literal.check(property.key)) {
@@ -227,10 +236,11 @@ export function convertScript(script) {
   }
 
   // Lifecycle hooks
+  const processHooks = (hookList, importList) => {
   for (const option of options) {
-    if (LIFECYCLE_HOOKS.includes(option.key.name)) {
+      if (hookList.includes(option.key.name)) {
       const hookName = camel(`on_${option.key.name}`)
-      newImports.push(hookName)
+        importList.push(hookName)
       setupFn.body.body.push(builders.expressionStatement(
         builders.callExpression(
           builders.identifier(hookName),
@@ -240,6 +250,9 @@ export function convertScript(script) {
       removeOption(option)
     }
   }
+  }
+  processHooks(LIFECYCLE_HOOKS, newImports.vue)
+  processHooks(ROUTER_HOOKS, newImports.vueRouter)
 
   transformThis(setupFn.body.body, valueWrappers)
 
