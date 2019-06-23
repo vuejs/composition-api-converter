@@ -356,12 +356,10 @@ function groupStatements (nodes, setupVariables) {
     for (const nodeB of wordedNodes) {
       if (nodeA !== nodeB) {
         const score = getStatementGroupScore(nodeA, nodeB, setupVariables)
-        // console.log(print(nodeA).code, '\n', print(nodeB).code, score)
         if (score > 0) {
           let group = groups.find(
             g => g.score === score && (g.nodes.has(nodeA) || g.nodes.has(nodeB))
           )
-          // console.log(group)
           if (!group) {
             group = {
               nodes: new Set(),
@@ -586,7 +584,6 @@ function generateGroupName (group, index) {
         let identifier = path.value.name
         if (group.declarations.includes(identifier)) {
           const words = processWords([{ value: identifier, score: 1 }])
-          console.log(identifier, words)
           for (const word of words) {
             if (!vars[word.value]) {
               vars[word.value] = 1
