@@ -129,8 +129,8 @@ export function convertScript(script, {
         const getFn = property.value.properties.find(p => p.key.name === 'get')
         const setFn = property.value.properties.find(p => p.key.name === 'set')
         args = [
-          getFn ? builders.arrowFunctionExpression([], getFn.value.body) : null,
-          setFn ? builders.arrowFunctionExpression([], setFn.value.body) : undefined,
+          getFn ? buildArrowFunctionExpression(getFn.value) : null,
+          setFn ? buildArrowFunctionExpression(setFn.value) : undefined,
         ]
       }
       setupFn.body.body.push(
@@ -180,7 +180,7 @@ export function convertScript(script, {
       let args = [firstArg]
       // Handler only as direct function
       if (namedTypes.FunctionExpression.check(property.value)) {
-        args.push(builders.arrowFunctionExpression(property.value.params, property.value.body))
+        args.push(buildArrowFunctionExpression(property.value))
         // Immediate is false by default
         args.push(builders.objectExpression([
           builders.objectProperty(builders.identifier('lazy'), builders.literal(true)),
@@ -188,7 +188,7 @@ export function convertScript(script, {
       } else if (namedTypes.ObjectExpression.check(property.value)) {
         // Object notation
         const handler = property.value.properties.find(p => p.key.name === 'handler')
-        args.push(builders.arrowFunctionExpression(handler.value.params, handler.value.body))
+        args.push(buildArrowFunctionExpression(handler.value))
         const options = []
         for (const objectProperty of property.value.properties) {
           if (objectProperty.key.name === 'immediate') {
@@ -229,22 +229,17 @@ export function convertScript(script, {
   if (methodsOption) {
     for (const property of methodsOption.value.properties) {
       if (variableMethods) {
-        setupFn.body.body.push(
-          builders.variableDeclaration('const', [
-            builders.variableDeclarator(
-              builders.identifier(property.key.name),
-              builders.arrowFunctionExpression(property.value.params, property.value.body),
-            ),
-          ]),
-        )
-      } else {
-        setupFn.body.body.push(
-          builders.functionDeclaration(
+        setupFn.body.body.push(builders.variableDeclaration('const', [
+          builders.variableDeclarator(
             builders.identifier(property.key.name),
-            property.value.params,
-            property.value.body
-          )
-        )
+            buildArrowFunctionExpression(property.value),
+          ),
+        ]))
+      } else {
+        setupFn.body.body.push(buildFunctionDeclaration(
+          property.key.name,
+          property.value
+        ))
       }
       setupReturn.argument.properties.push(
         builders.identifier(property.key.name),
@@ -326,4 +321,23 @@ function transformThis (node, setupVariables, valueWrappers) {
       this.traverse(path)
     },
   })
+}
+
+function buildArrowFunctionExpression (node) {
+  const result = builders.arrowFunctionExpression(
+    node.params,
+    node.body
+  )
+  result.async = node.async
+  return result
+}
+
+function buildFunctionDeclaration (name, node) {
+  const result = builders.functionDeclaration(
+    builders.identifier(name),
+    node.params,
+    node.body,
+  )
+  result.async = node.async
+  return result
 }
