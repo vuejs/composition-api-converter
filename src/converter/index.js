@@ -268,20 +268,23 @@ export function convertScript (script, {
   processHooks(LIFECYCLE_HOOKS, newImports.vue)
   processHooks(ROUTER_HOOKS, newImports.vueRouter)
 
-  // Remove `this`
-  transformThis(setupFn.body.body, setupVariables, valueWrappers)
+  if (setupFn.body.body.length) {
+    // Remove `this`
+    transformThis(setupFn.body.body, setupVariables, valueWrappers)
 
-  // Group statements heuristically
-  setupFn.body.body = groupStatements(setupFn.body.body, setupVariables)
+    // Group statements heuristically
+    setupFn.body.body = groupStatements(setupFn.body.body, setupVariables)
 
-  setupFn.body.body.push(setupReturn)
-  componentDefinition.declaration.properties.push(
-    builders.methodDefinition(
-      'method',
-      builders.identifier('setup'),
-      setupFn,
-    ),
-  )
+    setupFn.body.body.push(setupReturn)
+
+    componentDefinition.declaration.properties.push(
+      builders.methodDefinition(
+        'method',
+        builders.identifier('setup'),
+        setupFn,
+      ),
+    )
+  }
 
   // Imports
   const importStatements = []
