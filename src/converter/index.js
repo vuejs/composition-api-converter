@@ -268,8 +268,7 @@ export function convertScript (script, {
   processHooks(LIFECYCLE_HOOKS, newImports.vue)
   processHooks(ROUTER_HOOKS, newImports.vueRouter)
 
-  const isSetupRequired = setupFn.body.body && setupFn.body.body.length !== 0
-  if (isSetupRequired) {
+  if (setupFn.body.body.length) {
     // Remove `this`
     transformThis(setupFn.body.body, setupVariables, valueWrappers)
 
