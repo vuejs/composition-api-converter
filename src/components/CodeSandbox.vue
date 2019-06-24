@@ -3,16 +3,16 @@
     <!-- Code editor -->
     <MonacoEditor
       ref="editor"
-      class="editor"
       v-model="code"
+      class="editor"
       theme="vs-dark"
       language="javascript"
     />
     <!-- Result code -->
     <MonacoEditor
       ref="output"
-      class="editor"
       v-model="result"
+      class="editor"
       :options="{
         readOnly: true,
       }"
@@ -23,12 +23,9 @@
 </template>
 
 <script>
-import { value, watch } from 'vue-function-api'
 import MonacoEditor from 'vue-monaco'
-import prettier from 'prettier/standalone'
-import prettierTypescriptParser from 'prettier/parser-typescript'
-import { convertScript } from '@/converter'
 import { onWindowResize } from '@/functions/windowSize'
+import { useStoredCode, useCodeConverter } from '@/functions/code'
 
 const STORAGE_KEY_CODE = 'function-converter:code'
 
@@ -52,31 +49,8 @@ export default {
   },
 
   setup () {
-    const code = value(localStorage.getItem(STORAGE_KEY_CODE) || DEFAULT_CODE)
-    const result = value('')
-    const error = value(null)
-
-    // Convert code automatically
-    watch(code, value => {
-      localStorage.setItem(STORAGE_KEY_CODE, value)
-      error.value = null
-      try {
-        // Code mod
-        const resultCode = convertScript(value)
-        // Prettier
-        result.value = prettier.format(resultCode, {
-          plugins: [
-            prettierTypescriptParser,
-          ],
-          parser: 'typescript',
-          semi: false,
-          singleQuote: true,
-        })
-      } catch (e) {
-        console.error(e)
-        error.value = e
-      }
-    })
+    const { code } = useStoredCode(STORAGE_KEY_CODE, DEFAULT_CODE)
+    const { result, error } = useCodeConverter(code)
 
     onWindowResize(() => {
       [this.$refs.editor, this.$refs.output].forEach(editor => {
