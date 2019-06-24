@@ -208,6 +208,8 @@ function getStatementGroupScore (nodeA, nodeB, variables) {
 function mayGetVariableDeclarationName (node) {
   if (namedTypes.VariableDeclaration.check(node)) {
     return node.declarations[0].id.name
+  } else if (namedTypes.FunctionDeclaration.check(node)) {
+    return node.id.name
   }
 }
 
