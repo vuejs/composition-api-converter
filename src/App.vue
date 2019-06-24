@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <CodeSandbox/>
+    <CodeSandbox />
   </div>
 </template>
 

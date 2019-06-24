@@ -1,4 +1,4 @@
-import { value, watch } from "vue-function-api"
+import { value, watch } from 'vue-function-api'
 import prettier from 'prettier/standalone'
 import prettierTypescriptParser from 'prettier/parser-typescript'
 import { convertScript } from '@/converter'

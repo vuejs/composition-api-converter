@@ -83,4 +83,3 @@ export default {
 .monaco-aria-container
   display none
 </style>
-

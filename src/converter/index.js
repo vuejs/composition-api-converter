@@ -23,7 +23,7 @@ const ROUTER_HOOKS = [
   'beforeRouteLeave',
 ]
 
-export function convertScript(script, {
+export function convertScript (script, {
   variableMethods = false,
 } = {}) {
   const ast = parse(script)
@@ -53,7 +53,7 @@ export function convertScript(script, {
     [],
     builders.blockStatement([]),
   )
-  
+
   /** @type {import('recast').types.namedTypes.Property[]} */
   const options = componentDefinition.declaration.properties.filter(node =>
     namedTypes.Property.check(node),
