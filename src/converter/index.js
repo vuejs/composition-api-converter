@@ -23,7 +23,9 @@ const ROUTER_HOOKS = [
   'beforeRouteLeave',
 ]
 
-export function convertScript(script) {
+export function convertScript(script, {
+  variableMethods = false,
+} = {}) {
   const ast = parse(script)
   /** @type {import('recast').types.namedTypes.ExportDefaultDeclaration} */
   const componentDefinition = ast.program.body.find(node =>
@@ -226,14 +228,24 @@ export function convertScript(script) {
   const methodsOption = options.find(property => property.key.name === 'methods')
   if (methodsOption) {
     for (const property of methodsOption.value.properties) {
-      setupFn.body.body.push(
-        builders.variableDeclaration('const', [
-          builders.variableDeclarator(
+      if (variableMethods) {
+        setupFn.body.body.push(
+          builders.variableDeclaration('const', [
+            builders.variableDeclarator(
+              builders.identifier(property.key.name),
+              builders.arrowFunctionExpression(property.value.params, property.value.body),
+            ),
+          ]),
+        )
+      } else {
+        setupFn.body.body.push(
+          builders.functionDeclaration(
             builders.identifier(property.key.name),
-            builders.arrowFunctionExpression([], property.value.body),
-          ),
-        ]),
-      )
+            property.value.params,
+            property.value.body
+          )
+        )
+      }
       setupReturn.argument.properties.push(
         builders.identifier(property.key.name),
       )
