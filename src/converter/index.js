@@ -12,7 +12,7 @@ const LIFECYCLE_HOOKS = [
   'beforeUpdate',
   'updated',
   'beforeDestroy',
-  'descroyed',
+  'destroyed',
   'activated',
   'deactivated',
 ]
