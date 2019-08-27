@@ -1,10 +1,10 @@
-import { value, watch } from 'vue-function-api'
+import { ref, watch } from '@vue/composition-api'
 import prettier from 'prettier/standalone'
 import prettierTypescriptParser from 'prettier/parser-typescript'
 import { convertScript } from '@/converter'
 
 export function useStoredCode (storageKey, defaultCode) {
-  const code = value(localStorage.getItem(storageKey) || defaultCode)
+  const code = ref(localStorage.getItem(storageKey) || defaultCode)
 
   watch(code, value => {
     localStorage.setItem(storageKey, value)
@@ -16,8 +16,8 @@ export function useStoredCode (storageKey, defaultCode) {
 }
 
 export function useCodeConverter (code) {
-  const result = value('')
-  const error = value(null)
+  const result = ref('')
+  const error = ref(null)
 
   // Convert code automatically
   watch(code, value => {

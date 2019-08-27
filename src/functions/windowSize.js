@@ -1,10 +1,10 @@
-import { onCreated, onDestroyed } from 'vue-function-api'
+import { onBeforeMount, onUnmounted } from '@vue/composition-api'
 
 export function onWindowResize (callback) {
-  onCreated(() => {
+  onBeforeMount(() => {
     window.addEventListener('resize', callback)
   })
-  onDestroyed(() => {
+  onUnmounted(() => {
     window.removeEventListener('resize', callback)
   })
 }

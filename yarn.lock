@@ -1001,6 +1001,13 @@
     source-map "~0.6.1"
     vue-template-es2015-compiler "^1.9.0"
 
+"@vue/composition-api@^0.2.1":
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/@vue/composition-api/-/composition-api-0.2.1.tgz#d6b4327b308ac474982536f86bf44dd00271742d"
+  integrity sha512-eRmvToKbNjFXYyuFZ8e9KUcBXwDj0PQR1ngZP4u3R2jR9yjIbvgEsj7IKoddSKYiEkMttn+JiaSKX7n+REQBBw==
+  dependencies:
+    tslib "^1.9.3"
+
 "@vue/eslint-config-standard@^4.0.0":
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/@vue/eslint-config-standard/-/eslint-config-standard-4.0.0.tgz#6be447ee674e3b0f733c584098fd9a22e6d76fcd"
@@ -8085,13 +8092,6 @@ vue-eslint-parser@^5.0.0:
     espree "^4.1.0"
     esquery "^1.0.1"
     lodash "^4.17.11"
-
-vue-function-api@^1.0.3:
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/vue-function-api/-/vue-function-api-1.0.4.tgz#3914434b3831aeb82e269197bf9b975a741f6a1f"
-  integrity sha512-JH/7YLmRrcnP+BAjIJbL7orU0Ief76kvK6s3LIp0uiOR3pBa9nkpQWWJxaoN+r1CHQsC2794+FSpl7/d4wl3AA==
-  dependencies:
-    tslib "^1.9.3"
 
 vue-hot-reload-api@^2.3.0:
   version "2.3.3"
