@@ -1,10 +1,10 @@
 import Vue from 'vue'
-import { plugin } from 'vue-function-api'
+import CompositionApi from '@vue/composition-api'
 import App from './App.vue'
 
 Vue.config.productionTip = false
 
-Vue.use(plugin)
+Vue.use(CompositionApi)
 
 new Vue({
   render: h => h(App),
