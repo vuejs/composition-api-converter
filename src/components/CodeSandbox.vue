@@ -48,12 +48,12 @@ export default {
     MonacoEditor,
   },
 
-  setup () {
+  setup (props, context) {
     const { code } = useStoredCode(STORAGE_KEY_CODE, DEFAULT_CODE)
     const { result, error } = useCodeConverter(code)
 
     onWindowResize(() => {
-      [this.$refs.editor, this.$refs.output].forEach(editor => {
+      [context.refs.editor, context.refs.output].forEach(editor => {
         editor.getMonaco().layout()
       })
     })
