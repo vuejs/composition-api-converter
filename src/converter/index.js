@@ -88,7 +88,7 @@ export function convertScript (script, {
     }))
     if (dataProperties.length) {
       if (dataProperties.some(p => !p.state)) {
-        newImports.vue.push('value')
+        newImports.vue.push('ref')
       }
       if (dataProperties.some(p => p.state)) {
         newImports.vue.push('state')
@@ -99,7 +99,7 @@ export function convertScript (script, {
             builders.variableDeclarator(
               builders.identifier(property.name),
               builders.callExpression(
-                builders.identifier(property.state ? 'state' : 'value'),
+                builders.identifier(property.state ? 'state' : 'ref'),
                 [property.value],
               ),
             ),
