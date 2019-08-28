@@ -91,7 +91,7 @@ export function convertScript (script, {
         newImports.vue.push('ref')
       }
       if (dataProperties.some(p => p.state)) {
-        newImports.vue.push('state')
+        newImports.vue.push('reactive')
       }
       for (const property of dataProperties) {
         setupFn.body.body.push(
@@ -99,7 +99,7 @@ export function convertScript (script, {
             builders.variableDeclarator(
               builders.identifier(property.name),
               builders.callExpression(
-                builders.identifier(property.state ? 'state' : 'ref'),
+                builders.identifier(property.state ? 'reactive' : 'ref'),
                 [property.value],
               ),
             ),
